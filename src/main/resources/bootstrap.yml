@@ -1,0 +1,9 @@
+spring:
+  application:
+    name: transactiondomain
+  cloud:
+    config:
+      uri: http://localhost:8081
+      username: bootcampnttdada
+      password: nttdata2022w1
+
