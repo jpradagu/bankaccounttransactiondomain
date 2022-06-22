@@ -3,10 +3,13 @@ package com.nttdata.bootcamp.transactiondomain.controller;
 import com.nttdata.bootcamp.transactiondomain.exception.ResumenError;
 import com.nttdata.bootcamp.transactiondomain.model.Account;
 import com.nttdata.bootcamp.transactiondomain.service.AccountService;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
 import javax.validation.Valid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -27,6 +30,8 @@ import reactor.core.publisher.Mono;
 @RestController
 @RequestMapping("/api/transaction/account")
 public class AccountController {
+
+  private static final Logger logger = LoggerFactory.getLogger(AccountController.class);
 
   @Autowired
   private AccountService accountService;
@@ -54,6 +59,7 @@ public class AccountController {
    * create accountTransaction.
    */
   @PostMapping
+  @CircuitBreaker(name = "allCB", fallbackMethod = "fallbackCreateAccount")
   public Mono<ResponseEntity<Map<String, Object>>> create(
       @Valid @RequestBody Mono<Account> monoAccount) {
     Map<String, Object> result = new HashMap<>();
@@ -85,4 +91,8 @@ public class AccountController {
         .body(accountService.findByCustomerTypeAndCustomerId(customerType, customerId)));
   }
 
+  public Mono<ResponseEntity<Map<String, Object>>> fallbackCreateAccount(RuntimeException e) {
+    logger.error("transaction failed: ".concat(e.getMessage()));
+    return Mono.just(ResponseEntity.internalServerError().build());
+  }
 }
