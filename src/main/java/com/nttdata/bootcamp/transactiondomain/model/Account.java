@@ -23,7 +23,6 @@ public class Account {
   private MovementType movementType;
   @NotNull
   private BigDecimal amount;
-  @NotNull
   private BigDecimal amountCommission;
   @NotNull
   private String accountId;
