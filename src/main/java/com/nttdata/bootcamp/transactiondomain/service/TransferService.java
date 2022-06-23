@@ -1,6 +1,6 @@
 package com.nttdata.bootcamp.transactiondomain.service;
 
-import com.nttdata.bootcamp.transactiondomain.model.CustomerType;
+import com.nttdata.bootcamp.transactiondomain.model.AccountType;
 import com.nttdata.bootcamp.transactiondomain.model.Transfer;
 import com.nttdata.bootcamp.transactiondomain.repository.TransferRepository;
 import com.nttdata.bootcamp.transactiondomain.service.external.ExternalAccountService;
@@ -21,10 +21,13 @@ public class TransferService {
   private TransferRepository transferRepository;
 
   @Autowired
-  private ExternalAccountService accountService;
+  private ExternalAccountService externalAccountService;
 
   @Autowired
-  private ExternalCustomerService customerService;
+  private ExternalCustomerService externalCustomerService;
+
+  @Autowired
+  private AccountService accountService;
 
   /**
    * findAll transfer.
@@ -44,17 +47,17 @@ public class TransferService {
    * save transfer.
    */
   public Mono<Transfer> save(Transfer transfer) {
-    if (Objects.equals(transfer.getRecipientCustomerType(), CustomerType.PERSONAL)) {
+    if (Objects.equals(transfer.getRecipientAccountType(), AccountType.PERSONAL)) {
       return personalTransfer(transfer);
-    } else if (Objects.equals(transfer.getRecipientCustomerType(), CustomerType.COMMERCIAL)) {
+    } else if (Objects.equals(transfer.getRecipientAccountType(), AccountType.COMMERCIAL)) {
       return commercialTransfer(transfer);
     }
     return Mono.error(new RuntimeException("Type of customer not defined"));
   }
 
   private Mono<Transfer> personalTransfer(Transfer transfer) {
-    return accountService.findPersonalById(transfer.getRecipientAccountId())
-        .flatMap(personalAccountDto -> customerService.findPersonalById(
+    return externalAccountService.findPersonalById(transfer.getRecipientAccountId())
+        .flatMap(personalAccountDto -> externalCustomerService.findPersonalById(
                 personalAccountDto.getCustomerId())
             .flatMap(personalCustomerDto -> {
               if (personalCustomerDto.getDni().equals(transfer.getRecipientDocumentNumber())) {
@@ -66,12 +69,14 @@ public class TransferService {
   }
 
   private Mono<Transfer> commercialTransfer(Transfer transfer) {
-    return accountService.findCommercialById(transfer.getRecipientAccountId())
-        .flatMap(commercialAccountDto -> customerService.findCommercialById(
+    return externalAccountService.findCommercialById(transfer.getRecipientAccountId())
+        .flatMap(commercialAccountDto -> externalCustomerService.findCommercialById(
                 commercialAccountDto.getCustomerId())
             .flatMap(commercialCustomerDto -> {
               if (commercialCustomerDto.getReasonSocial()
                   .equals(transfer.getRecipientDocumentNumber())) {
+                // reducir origen
+                // aumentar el destinatario
                 return transferRepository.save(transfer);
               } else {
                 return Mono.error(new RuntimeException("Incorrect document number"));

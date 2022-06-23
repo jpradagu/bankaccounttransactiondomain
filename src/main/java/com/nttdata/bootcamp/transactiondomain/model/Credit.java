@@ -23,9 +23,6 @@ public class Credit {
   private BigDecimal amount;
   @DateTimeFormat(pattern = "yyyy-MM-dd")
   private Date paymentDate;
-  @NotNull
-  private CustomerType customerType;
-  @NotNull
   private String customerId;
   private BigDecimal interestRate;
 }

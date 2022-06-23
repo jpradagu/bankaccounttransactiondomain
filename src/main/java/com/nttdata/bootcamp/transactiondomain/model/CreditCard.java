@@ -21,9 +21,6 @@ public class CreditCard {
   private BigDecimal amount;
   @DateTimeFormat(pattern = "yyyy-MM-dd")
   private Date tradeDate;
-  @NotNull
-  private CustomerType customerType;
-  @NotNull
   private String customerId;
   private BigDecimal interestRate;
   private Integer fees;

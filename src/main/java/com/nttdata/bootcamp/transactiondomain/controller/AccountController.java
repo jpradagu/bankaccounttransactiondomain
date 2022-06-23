@@ -82,13 +82,13 @@ public class AccountController {
   }
 
   /**
-   * findAll accountTransaction by customerType and customerId.
+   * findAll accountTransaction by accountType and customerId.
    */
-  @GetMapping("/{customerType}/{customerId}")
-  public Mono<ResponseEntity<Flux<Account>>> findAllByCustomerTypeAndCustomerId(
-      @PathVariable String customerType, @PathVariable String customerId) {
+  @GetMapping("/{accountType}/{customerId}")
+  public Mono<ResponseEntity<Flux<Account>>> findAllByAccountTypeAndCustomerId(
+      @PathVariable String accountType, @PathVariable String customerId) {
     return Mono.just(ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON)
-        .body(accountService.findByCustomerTypeAndCustomerId(customerType, customerId)));
+        .body(accountService.findAllByAccountTypeAndCustomerId(accountType, customerId)));
   }
 
   public Mono<ResponseEntity<Map<String, Object>>> fallbackCreateAccount(RuntimeException e) {

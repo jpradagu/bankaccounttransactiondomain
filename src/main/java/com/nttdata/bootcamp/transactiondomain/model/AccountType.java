@@ -8,6 +8,6 @@ import lombok.Getter;
  */
 @AllArgsConstructor
 @Getter
-public enum CustomerType {
+public enum AccountType {
   COMMERCIAL, PERSONAL
 }

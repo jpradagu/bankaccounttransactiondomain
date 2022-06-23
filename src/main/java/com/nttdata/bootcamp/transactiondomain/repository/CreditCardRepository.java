@@ -10,7 +10,7 @@ import reactor.core.publisher.Flux;
 public interface CreditCardRepository extends ReactiveMongoRepository<CreditCard, String> {
 
   /**
-   * find by customerType and customerId.
+   * findAll by customerId.
    */
-  Flux<CreditCard> findByCustomerTypeAndCustomerId(String customerType, String customerId);
+  Flux<CreditCard> findAllByCustomerId(String customerId);
 }

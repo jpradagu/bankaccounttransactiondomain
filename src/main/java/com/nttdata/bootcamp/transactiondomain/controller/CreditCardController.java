@@ -68,7 +68,7 @@ public class CreditCardController {
   /**
    * delete creditTransaction.
    */
-  @DeleteMapping("/{id}")
+  @DeleteMapping("/customer/{id}")
   public Mono<ResponseEntity<Void>> delete(@PathVariable String id) {
     return creditCardService.findById(id)
         .flatMap(e -> creditCardService.delete(e)
@@ -77,13 +77,12 @@ public class CreditCardController {
   }
 
   /**
-   * findAll by customerType and customerId.
+   * findAll customerType by customerId.
    */
-  @GetMapping("/{customerType}/{customerId}")
-  public Mono<ResponseEntity<Flux<CreditCard>>> findAllByCustomerTypeAndCustomerId(
-      @PathVariable String customerType, @PathVariable String customerId) {
+  @GetMapping("/{customerId}")
+  public Mono<ResponseEntity<Flux<CreditCard>>> findAllByCustomerId(
+      @PathVariable String customerId) {
     return Mono.just(ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON)
-        .body(creditCardService.findByCustomerTypeAndCustomerId(customerType,
-            customerId)));
+        .body(creditCardService.findByCustomerId(customerId)));
   }
 }

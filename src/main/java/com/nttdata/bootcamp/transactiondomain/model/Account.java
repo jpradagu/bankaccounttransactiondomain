@@ -17,8 +17,7 @@ public class Account {
   @Id
   private String id;
   @NotNull
-  private CustomerType customerType;
-  @NotNull
+  private AccountType accountType;
   private String customerId;
   @NotNull
   private MovementType movementType;

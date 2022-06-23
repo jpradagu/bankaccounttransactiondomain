@@ -1,11 +1,10 @@
 package com.nttdata.bootcamp.transactiondomain.service;
 
 import com.nttdata.bootcamp.transactiondomain.model.Account;
-import com.nttdata.bootcamp.transactiondomain.model.CustomerType;
+import com.nttdata.bootcamp.transactiondomain.model.AccountType;
 import com.nttdata.bootcamp.transactiondomain.model.MovementType;
 import com.nttdata.bootcamp.transactiondomain.repository.AccountRepository;
 import com.nttdata.bootcamp.transactiondomain.service.external.ExternalAccountService;
-import com.nttdata.bootcamp.transactiondomain.service.external.ExternalCustomerService;
 import com.nttdata.bootcamp.transactiondomain.service.external.ExternalTypeAccountService;
 import com.nttdata.bootcamp.transactiondomain.service.external.dto.TypeAccountDto;
 import java.math.BigDecimal;
@@ -34,9 +33,6 @@ public class AccountService {
   private ExternalAccountService externalAccountService;
 
   @Autowired
-  private ExternalCustomerService externalCustomerService;
-
-  @Autowired
   private ExternalTypeAccountService typeAccountService;
 
   /**
@@ -57,13 +53,13 @@ public class AccountService {
    * save account transaction.
    */
   public Mono<Account> save(Account transaction) {
-    return findByCustomerTypeAndCustomerId(transaction.getCustomerType().name(),
+    return findAllByAccountTypeAndCustomerId(transaction.getAccountType().name(),
         transaction.getCustomerId())
         .collectList()
         .flatMap(lst -> {
-          if (Objects.equals(transaction.getCustomerType(), CustomerType.PERSONAL)) {
+          if (Objects.equals(transaction.getAccountType(), AccountType.PERSONAL)) {
             return personalTransaction(transaction, lst);
-          } else if (Objects.equals(transaction.getCustomerType(), CustomerType.COMMERCIAL)) {
+          } else if (Objects.equals(transaction.getAccountType(), AccountType.COMMERCIAL)) {
             return commercialTransaction(transaction, lst);
           }
           return Mono.error(new RuntimeException("Type of customer not defined"));
@@ -72,39 +68,36 @@ public class AccountService {
 
   private Mono<Account> commercialTransaction(
       Account transaction, List<Account> transactionList) {
-    return externalCustomerService.findCommercialById(transaction.getCustomerId())
-        .flatMap(
-            customerDto -> externalAccountService.findCommercialById(transaction.getAccountId())
-                .flatMap(accountDto -> typeAccountService.findById(accountDto.getTypeAccountId())
-                    .flatMap(typeAccDto -> {
-                      BigDecimal commision = calculateCommision(typeAccDto, transactionList);
-                      if (allowMovementTransaction(typeAccDto, transactionList)) {
-                        return Mono.error(new RuntimeException("Not allowed operation of the day"));
-                      }
-                      transaction.setTransactionDate(new Date());
-                      transaction.setAmountCommission(commision);
-                      if (Objects.equals(transaction.getMovementType(), MovementType.DEPOSIT)) {
-                        accountDto.setAmount(accountDto.getAmount().add(transaction.getAmount())
-                            .subtract(commision));
-                        return externalAccountService.updateCommercial(accountDto,
-                                accountDto.getId())
-                            .flatMap(accountTx -> accountRepository.save(transaction));
+    return externalAccountService.findCommercialById(transaction.getAccountId())
+        .flatMap(accountDto -> typeAccountService.findById(accountDto.getTypeAccountId())
+            .flatMap(typeAccDto -> {
+              if (allowMovementTransaction(typeAccDto, transactionList)) {
+                return Mono.error(new RuntimeException("Not allowed operation of the day"));
+              }
+              transaction.setCustomerId(accountDto.getCustomerId());
+              transaction.setTransactionDate(new Date());
+              transaction.setAmountCommission(calculateCommision(typeAccDto, transactionList));
+              if (Objects.equals(transaction.getMovementType(), MovementType.DEPOSIT)) {
+                accountDto.setAmount(accountDto.getAmount().add(transaction.getAmount())
+                    .subtract(transaction.getAmountCommission()));
+                return externalAccountService.updateCommercial(accountDto,
+                        accountDto.getId())
+                    .flatMap(accountTx -> accountRepository.save(transaction));
 
-                      } else if (Objects.equals(transaction.getMovementType(),
-                          MovementType.WITHDRAWALS)) {
-                        if (accountDto.getAmount().compareTo(transaction.getAmount()) < 0) {
-                          return Mono.error(new RuntimeException("Insufficient amount"));
-                        }
-                        accountDto.setAmount(
-                            accountDto.getAmount().subtract(transaction.getAmount())
-                                .subtract(commision));
-                        return externalAccountService.updateCommercial(accountDto,
-                                accountDto.getId())
-                            .flatMap(accountTx -> accountRepository.save(transaction));
-                      }
-                      return Mono.error(new RuntimeException("type of movement not defined"));
-
-                    })));
+              } else if (Objects.equals(transaction.getMovementType(),
+                  MovementType.WITHDRAWALS)) {
+                if (accountDto.getAmount().compareTo(transaction.getAmount()) < 0) {
+                  return Mono.error(new RuntimeException("Insufficient amount"));
+                }
+                accountDto.setAmount(
+                    accountDto.getAmount().subtract(transaction.getAmount())
+                        .subtract(transaction.getAmountCommission()));
+                return externalAccountService.updateCommercial(accountDto,
+                        accountDto.getId())
+                    .flatMap(accountTx -> accountRepository.save(transaction));
+              }
+              return Mono.error(new RuntimeException("type of movement not defined"));
+            }));
   }
 
   private boolean allowMovementTransaction(TypeAccountDto typeAccDto,
@@ -129,34 +122,34 @@ public class AccountService {
   private Mono<Account> personalTransaction(
       Account transaction,
       List<Account> accountTransactions) {
-    return externalCustomerService.findPersonalById(transaction.getCustomerId())
-        .flatMap(personal -> externalAccountService.findPersonalById(transaction.getAccountId())
-            .flatMap(
-                accountDto -> typeAccountService.findById(accountDto.getTypeAccountId())
-                    .flatMap(typeAccDto -> {
-                      BigDecimal commision = calculateCommision(typeAccDto, accountTransactions);
-                      if (allowMovementTransaction(typeAccDto, accountTransactions)) {
-                        return Mono.error(new RuntimeException("Not allowed operation of the day"));
-                      }
-                      transaction.setTransactionDate(new Date());
-                      transaction.setAmountCommission(commision);
-                      if (transaction.getMovementType().equals(MovementType.DEPOSIT)) {
-                        accountDto.setAmount(accountDto.getAmount().add(transaction.getAmount())
-                            .subtract(commision));
-                        return externalAccountService.updatePersonal(accountDto, accountDto.getId())
-                            .flatMap(accountTx -> accountRepository.save(transaction));
+    return externalAccountService.findPersonalById(transaction.getAccountId())
+        .flatMap(
+            accountDto -> typeAccountService.findById(accountDto.getTypeAccountId())
+                .flatMap(typeAccDto -> {
+                  if (allowMovementTransaction(typeAccDto, accountTransactions)) {
+                    return Mono.error(new RuntimeException("Not allowed operation of the day"));
+                  }
+                  transaction.setCustomerId(accountDto.getCustomerId());
+                  transaction.setTransactionDate(new Date());
+                  transaction.setAmountCommission(
+                      calculateCommision(typeAccDto, accountTransactions));
+                  if (transaction.getMovementType().equals(MovementType.DEPOSIT)) {
+                    accountDto.setAmount(accountDto.getAmount().add(transaction.getAmount())
+                        .subtract(transaction.getAmountCommission()));
+                    return externalAccountService.updatePersonal(accountDto, accountDto.getId())
+                        .flatMap(accountTx -> accountRepository.save(transaction));
 
-                      } else if (transaction.getMovementType().equals(MovementType.WITHDRAWALS)) {
-                        if (accountDto.getAmount().compareTo(transaction.getAmount()) < 0) {
-                          return Mono.error(new RuntimeException("Insufficient amount"));
-                        }
-                        accountDto.setAmount(accountDto.getAmount().add(transaction.getAmount())
-                            .subtract(commision));
-                        return externalAccountService.updatePersonal(accountDto, accountDto.getId())
-                            .flatMap(accountTx -> accountRepository.save(transaction));
-                      }
-                      return Mono.empty();
-                    })));
+                  } else if (transaction.getMovementType().equals(MovementType.WITHDRAWALS)) {
+                    if (accountDto.getAmount().compareTo(transaction.getAmount()) < 0) {
+                      return Mono.error(new RuntimeException("Insufficient amount"));
+                    }
+                    accountDto.setAmount(accountDto.getAmount().add(transaction.getAmount())
+                        .subtract(transaction.getAmountCommission()));
+                    return externalAccountService.updatePersonal(accountDto, accountDto.getId())
+                        .flatMap(accountTx -> accountRepository.save(transaction));
+                  }
+                  return Mono.empty();
+                }));
   }
 
   private int getNumberTransactionsCurrentMonth(List<Account> accountTransactions) {
@@ -184,8 +177,8 @@ public class AccountService {
   /**
    * find accountTransaction by customerType and customerId.
    */
-  public Flux<Account> findByCustomerTypeAndCustomerId(String customerType,
-                                                       String customerId) {
-    return accountRepository.findByCustomerTypeAndCustomerId(customerType, customerId);
+  public Flux<Account> findAllByAccountTypeAndCustomerId(String customerType,
+                                                         String customerId) {
+    return accountRepository.findAllByAccountTypeAndCustomerId(customerType, customerId);
   }
 }

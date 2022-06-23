@@ -10,8 +10,8 @@ import reactor.core.publisher.Flux;
 public interface AccountRepository extends ReactiveMongoRepository<Account, String> {
 
   /**
-   * find by customerType and customerId.
+   * findAll by customerType and customerId.
    */
-  Flux<Account> findByCustomerTypeAndCustomerId(String customerType, String customerId);
+  Flux<Account> findAllByAccountTypeAndCustomerId(String accountType, String customerId);
 
 }

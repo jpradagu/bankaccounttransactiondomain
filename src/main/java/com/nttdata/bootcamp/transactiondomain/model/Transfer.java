@@ -10,7 +10,7 @@ public class Transfer {
   private String sourceAccountId;
   private String recipientAccountId;
   private TransferType transferType;
-  private CustomerType recipientCustomerType;
+  private AccountType recipientAccountType;
   private String recipientDocumentNumber;
   private BigDecimal amount;
 }

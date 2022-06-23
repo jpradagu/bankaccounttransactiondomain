@@ -78,11 +78,10 @@ public class CreditController {
   /**
    * findAll creditTransaction by customerType and customerId.
    */
-  @GetMapping("/{customerType}/{customerId}")
-  public Mono<ResponseEntity<Flux<Credit>>> findAllByCustomerTypeAndCustomerId(
-      @PathVariable String customerType, @PathVariable String customerId) {
+  @GetMapping("/customer/{customerId}")
+  public Mono<ResponseEntity<Flux<Credit>>> findAllByCustomerId(@PathVariable String customerId) {
     return Mono.just(ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON)
-        .body(creditService.findByCustomerTypeAndCustomerId(customerType, customerId)));
+        .body(creditService.findAllByCustomerId(customerId)));
   }
 
 }
